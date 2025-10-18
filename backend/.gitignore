@@ -1,0 +1,9 @@
+# backend/.gitignore
+
+# Environment
+.env
+Venv/
+
+# Python cache
+__pycache__/
+*.pyc
