@@ -167,3 +167,16 @@ def list_models():
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Qshala Reimbursement API"}
+
+# --- Add CORS Middleware ---
+# This is crucial to allow our React frontend to communicate with this backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",                        # For local development
+        "https://qshala-reimbursement-app.vercel.app"  # Your live frontend URL
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

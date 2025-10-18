@@ -33,7 +33,7 @@ function App() {
 
     try {
       // Make API call to our FastAPI backend to process the invoice
-      const response = await axios.post('http://127.0.0.1:8000/api/process-invoice/', formData, {
+      const response = await axios.post('https://qshala-reimbursement-api.onrender.com/api/process-invoice/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setExtractedData(response.data); // Store the AI's response
@@ -62,7 +62,7 @@ function App() {
 
     try {
       // Make API call to our backend to create the reimbursement
-      const response = await axios.post('http://127.0.0.1:8000/api/create-reimbursement/', extractedData);
+      const response = await axios.post('https://qshala-reimbursement-api.onrender.com/api/create-reimbursement/', extractedData);
       setMessage(`Success! ${response.data.message}`);
       setExtractedData(null); // Reset the form
       setSelectedFile(null);
