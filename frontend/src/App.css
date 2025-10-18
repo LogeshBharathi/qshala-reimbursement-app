@@ -1,0 +1,112 @@
+body {
+  background-color: #3498db; /* Qshala Blue */
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* New styles for the logo */
+.app-logo {
+  position: absolute; /* Position relative to the nearest positioned ancestor (body/viewport) */
+  top: 20px;       /* Distance from the top */
+  left: 20px;      /* Distance from the left */
+  width: 173px;     /* Adjust size as needed */
+  height: 60px;    /* Maintain aspect ratio */
+  border-radius: 5px;
+  z-index: 1000;   /* Ensure it's above other elements if they overlap */
+}
+
+/* Adjust the container's padding or width if the logo overlaps */
+.container {
+    /* ... existing styles ... */
+    padding-top: 80px; /* Example: If logo sits 20px down and is 80px tall, add some space */
+}
+
+.container {
+  background-color: #2c3e50; /* Darker shade for contrast */
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 30px;
+}
+
+.upload-box, .verification-form {
+  border: 2px dashed #f1c40f; /* Qshala Yellow */
+  border-radius: 8px;
+  padding: 30px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.upload-box:hover {
+  background-color: rgba(241, 196, 15, 0.1);
+}
+
+.upload-box p {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.hidden {
+  display: none;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  box-sizing: border-box; /* Important for padding */
+}
+
+button {
+  background-color: #f1c40f; /* Qshala Yellow */
+  color: #2c3e50;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #f39c12; /* Darker Yellow */
+}
+
+.spinner, .message {
+  margin-top: 20px;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #e74c3c; /* Red for errors */
+}
+
+.success {
+  color: #2ecc71; /* Green for success */
+}
