@@ -11,7 +11,7 @@ from PIL import Image
 # New Google Drive Imports
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
 import io
 
 # Load environment variables from .env file
@@ -31,34 +31,45 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 # --- Initialize FastAPI App ---
 app = FastAPI(title="Qshala Reimbursement API")
 
-# (CORS Middleware remains the same)
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "https://qshala-reimbursement-app.vercel.app"],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# (Reimbursement Types list remains the same)
+# Reimbursement Types list
 REIMBURSEMENT_TYPES = [
-    'Travel', 'Hotel & Accommodation', 'Food', 'Medical', 'Telephone', 'Fuel', 
+    'Travel', 'Hotel & Accommodation', 'Food', 'Medical', 'Telephone', 'Fuel',
     'Imprest', 'Other', 'Air Ticket', 'Postage/courier/transport/delivery charges',
     'Printing and stationery for quiz', 'Train Ticket'
 ]
 
 
-# --- NEW: Helper function to upload to Google Drive ---
-def upload_to_drive(file_stream, filename):
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+# --- Helper function to upload to Google Drive (FIXED) ---
+def upload_to_drive(file_stream, filename, mimetype):
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    if creds_json:
+        creds_info = json.loads(creds_json)
+        creds = service_account.Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+    else:
+        creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    
     service = build('drive', 'v3', credentials=creds)
     
     file_metadata = {'name': filename, 'parents': [GOOGLE_DRIVE_FOLDER_ID]}
-    media = MediaFileUpload(None, mimetype='image/png', resumable=True) # Assuming png, but can be dynamic
     
     # We need to read the file into memory to upload it
     file_stream.seek(0)
-    media.stream = io.BytesIO(file_stream.read())
+    media_body = MediaIoBaseUpload(io.BytesIO(file_stream.read()), mimetype=mimetype, resumable=True)
 
-    file = service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
+    file = service.files().create(
+        body=file_metadata,
+        media_body=media_body,
+        fields='id, webViewLink'
+    ).execute()
     
     # Make the file publicly accessible
     file_id = file.get('id')
@@ -73,8 +84,8 @@ async def process_invoice(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="File provided is not an image.")
     try:
-        # --- UPGRADED: Upload the file to Google Drive ---
-        invoice_url = upload_to_drive(file.file, file.filename)
+        # --- UPGRADED: Upload the file to Google Drive with dynamic mimetype ---
+        invoice_url = upload_to_drive(file.file, file.filename, file.content_type)
         
         # Rewind the file to be read by PIL for AI processing
         file.file.seek(0)
@@ -105,11 +116,9 @@ async def process_invoice(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Failed to process invoice: {str(e)}")
 
 
-# --- API Endpoint 2: Create Reimbursement Payout (No changes needed here) ---
+# --- API Endpoint 2: Create Reimbursement Payout ---
 @app.post("/api/create-reimbursement/")
 async def create_reimbursement(data: dict):
-    # This function already accepts 'invoice_url', so no changes are needed!
-    # ... (rest of the function is the same)
     reimbursement_type = data.get("type")
     amount = data.get("amount")
     description = data.get("description")
@@ -121,20 +130,23 @@ async def create_reimbursement(data: dict):
         if 'error' in contact_res and contact_res['error'].get('description'):
             raise Exception(f"Contact creation failed: {contact_res['error']['description']}")
         contact_id = contact_res['id']
+
         fund_account_data = {"contact_id": contact_id, "account_type": "bank_account", "bank_account": {"name": "Test Account Holder", "ifsc": "UTIB0000000", "account_number": "2323231234567890"}}
         fund_account_res = requests.post('https://api.razorpay.com/v1/fund_accounts', json=fund_account_data, auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)).json()
         if 'error' in fund_account_res and fund_account_res['error'].get('description'):
             raise Exception(f"Fund account creation failed: {fund_account_res['error']['description']}")
         fund_account_id = fund_account_res['id']
+
         payout_data = {"account_number": RAZORPAY_ACCOUNT_NUMBER, "fund_account_id": fund_account_id, "amount": amount_in_paise, "currency": "INR", "mode": "IMPS", "purpose": "payout", "queue_if_low_balance": True, "notes": { "reimbursement_type": reimbursement_type, "description": description, "invoice_url": invoice_url }}
         payout_res = requests.post('https://api.razorpay.com/v1/payouts', json=payout_data, auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)).json()
         if 'error' in payout_res and payout_res['error'].get('description') is not None:
             raise Exception(f"Payout creation failed: {payout_res['error']['description']}")
+        
         return {"status": "success", "message": "Reimbursement created and queued for approval.", "details": payout_res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# (Welcome and list-models endpoints remain the same)
+# --- Other Endpoints ---
 @app.get("/api/list-models/")
 def list_models():
     try:
@@ -145,6 +157,7 @@ def list_models():
         return {"models_you_can_use": available_models}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Qshala Reimbursement API"}
