@@ -1,5 +1,5 @@
 # backend/.gitignore
-
+credentials.json
 # Environment
 .env
 Venv/
