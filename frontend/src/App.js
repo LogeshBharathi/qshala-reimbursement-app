@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+// frontend/src/App.js
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import logo from './Qshala_logo.gif';
 import './App.css';
 
-// This is the list of options for our dropdown menu
+const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+
 const REIMBURSEMENT_TYPES = [
   'Travel', 'Hotel & Accommodation', 'Food', 'Medical', 'Telephone', 'Fuel', 
   'Imprest', 'Other', 'Air Ticket', 'Postage/courier/transport/delivery charges',
@@ -11,14 +12,12 @@ const REIMBURSEMENT_TYPES = [
 ];
 
 function App() {
-  // --- State Management ---
-  // These variables will hold the data and control the UI
   const [selectedFile, setSelectedFile] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [imagePreview, setImagePreview] = useState('');
 
-  // --- Function to Handle File Upload and AI Processing ---
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -27,16 +26,18 @@ function App() {
     setIsLoading(true);
     setMessage('');
     setExtractedData(null);
+    
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      // Make API call to our FastAPI backend to process the invoice
-      const response = await axios.post('https://qshala-reimbursement-api.onrender.com/api/process-invoice/', formData, {
+      const response = await axios.post(`${API_URL}/api/process-invoice/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setExtractedData(response.data); // Store the AI's response
+      setExtractedData(response.data);
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'An unexpected error occurred.';
       setMessage(`Error: ${errorMsg}`);
@@ -45,7 +46,6 @@ function App() {
     }
   };
 
-  // --- Function to Handle Form Data Changes ---
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setExtractedData((prevData) => ({
@@ -54,18 +54,25 @@ function App() {
     }));
   };
 
-  // --- Function to Handle Final Submission to RazorpayX ---
   const handleSubmit = async (event) => {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault();
     setIsLoading(true);
     setMessage('');
 
+    // --- ADDED SAFETY CHECK ---
+    // This prevents the user from submitting a form with an empty or invalid amount.
+    if (!extractedData.amount || parseFloat(extractedData.amount) <= 0) {
+        setMessage('Error: Amount is missing or invalid. Please enter a valid amount.');
+        setIsLoading(false);
+        return; // Stop the function here
+    }
+
     try {
-      // Make API call to our backend to create the reimbursement
-      const response = await axios.post('https://qshala-reimbursement-api.onrender.com/api/create-reimbursement/', extractedData);
+      const response = await axios.post(`${API_URL}/api/create-reimbursement/`, extractedData);
       setMessage(`Success! ${response.data.message}`);
-      setExtractedData(null); // Reset the form
+      setExtractedData(null);
       setSelectedFile(null);
+      setImagePreview('');
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'An unexpected error occurred.';
       setMessage(`Error: ${errorMsg}`);
@@ -74,11 +81,18 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   return (
     <div className="container">
       <h1>📄 AI Reimbursement Uploader</h1>
-      <img src={logo} alt="Qshala Logo" className="app-logo" />
-      {/* --- Step 1: The Upload Box --- */}
+
       {!extractedData && (
         <div className="upload-box" onClick={() => document.getElementById('fileInput').click()}>
           <input
@@ -92,19 +106,22 @@ function App() {
         </div>
       )}
 
-      {/* --- Loading Spinner --- */}
       {isLoading && <div className="spinner">Processing... 🤖</div>}
-
-      {/* --- Error/Success Messages --- */}
       {message && <div className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>{message}</div>}
 
-      {/* --- Step 2: The Verification Form (shows after AI processing) --- */}
       {extractedData && !isLoading && (
         <form className="verification-form" onSubmit={handleSubmit}>
           <h2>Please Verify Details</h2>
+          
+          {imagePreview && (
+            <div className="image-preview-container">
+              <img src={imagePreview} alt="Invoice Preview" className="invoice-preview-image"/>
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="type">Type of Reimbursement</label>
-            <select id="type" name="type" value={extractedData.type} onChange={handleInputChange}>
+            <select id="type" name="type" value={extractedData.type || 'Other'} onChange={handleInputChange}>
               {REIMBURSEMENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
             </select>
           </div>
@@ -114,9 +131,10 @@ function App() {
               type="number"
               id="amount"
               name="amount"
-              value={extractedData.amount}
+              value={extractedData.amount || ''}
               onChange={handleInputChange}
               step="0.01"
+              placeholder="e.g., 150.50"
             />
           </div>
           <div className="form-group">
@@ -124,7 +142,7 @@ function App() {
             <textarea
               id="description"
               name="description"
-              value={extractedData.description}
+              value={extractedData.description || ''}
               onChange={handleInputChange}
               rows="3"
             />
