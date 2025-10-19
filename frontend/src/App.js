@@ -4,7 +4,7 @@ import axios from 'axios';
 import './App.css';
 import logo from './Qshala_logo.gif';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://qshala-reimbursement-api.onrender.com';
 
 const REIMBURSEMENT_TYPES = [
   'Travel', 'Hotel & Accommodation', 'Food', 'Medical', 'Telephone', 'Fuel', 
@@ -15,19 +15,17 @@ const REIMBURSEMENT_TYPES = [
 function App() {
   const [extractedData, setExtractedData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Processing...'); // NEW: More specific loading message
   const [message, setMessage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [submissionStatus, setSubmissionStatus] = useState('form');
 
-  // ✅ NEW: useEffect to handle auto-hiding toast messages
   useEffect(() => {
     if (message) {
-      const timer = setTimeout(() => {
-        setMessage('');
-      }, 4000); // Message will disappear after 4 seconds
-      return () => clearTimeout(timer); // Cleanup timer
+      const timer = setTimeout(() => setMessage(''), 4000);
+      return () => clearTimeout(timer);
     }
   }, [message]);
 
@@ -36,6 +34,7 @@ function App() {
     if (!file) return;
 
     setIsLoading(true);
+    setLoadingMessage('Uploading invoice...'); // NEW: Update loading message
     setMessage('');
     setSubmissionStatus('form');
     setModalMessage('');
@@ -47,14 +46,24 @@ function App() {
     formData.append('file', file);
 
     try {
-      const response = await axios.post(`${API_URL}/api/process-invoice/`, formData);
+      // NEW: Set a longer timeout for the axios request (90 seconds)
+      const axiosConfig = {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 90000 
+      };
+
+      setLoadingMessage('AI is reading the invoice...'); // NEW: Update loading message
+      const response = await axios.post(`${API_URL}/api/process-invoice/`, formData, axiosConfig);
+      
       if (!response.data.amount || response.data.amount === 0) {
         setModalMessage("AI couldn't read the details. Please fill them in manually.");
       }
       setExtractedData(response.data);
       setIsModalOpen(true);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'An unexpected error occurred.';
+      const errorMsg = error.code === 'ECONNABORTED' 
+        ? 'The server took too long to respond. Please try again.' 
+        : (error.response?.data?.detail || 'An unexpected error occurred.');
       setMessage(`Error: ${errorMsg}`);
     } finally {
       setIsLoading(false);
@@ -82,7 +91,7 @@ function App() {
 
       setTimeout(() => {
         closeModal();
-        setMessage('Successfully submitted reimbursement!'); // This will now become a toast
+        setMessage('Successfully submitted reimbursement!');
       }, 2000);
 
     } catch (error) {
@@ -105,7 +114,6 @@ function App() {
   }, [imagePreview]);
 
   return (
-    // We add a fragment <> to hold the app and the toast message
     <>
       <div className="container">
         <img src={logo} alt="Qshala Logo" className="app-logo" />
@@ -113,7 +121,7 @@ function App() {
         <p>Upload your invoice to begin the reimbursement process.</p>
         
         <button onClick={() => document.getElementById('fileInput').click()} disabled={isLoading}>
-          {isLoading ? 'Processing...' : 'Click to Upload Invoice'}
+          {isLoading ? loadingMessage : 'Click to Upload Invoice'}
         </button>
         
         <input type="file" id="fileInput" className="hidden" onChange={handleFileChange} accept="image/*" />
@@ -125,7 +133,6 @@ function App() {
          </div>
       )}
       
-      {/* ✅ NEW: Toast message will appear here, styled by CSS */}
       {message && <div className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>{message}</div>}
     </>
   );
