@@ -18,6 +18,9 @@ function App() {
   const [message, setMessage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // NEW: State to hold a message specifically for the modal
+  const [modalMessage, setModalMessage] = useState('');
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
@@ -26,6 +29,7 @@ function App() {
     setIsLoading(true);
     setMessage('');
     setExtractedData(null);
+    setModalMessage(''); // Reset modal message
     
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
@@ -37,6 +41,12 @@ function App() {
       const response = await axios.post(`${API_URL}/api/process-invoice/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      
+      // ✅ THIS IS THE FIX: Check if the AI failed to extract data
+      if (!response.data.amount || response.data.amount === 0) {
+        setModalMessage("AI couldn't read the details. Please fill them in manually.");
+      }
+      
       setExtractedData(response.data);
       setIsModalOpen(true);
     } catch (error) {
@@ -58,20 +68,20 @@ function App() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!extractedData.amount || parseFloat(extractedData.amount) <= 0) {
-        setMessage('Error: Amount is missing or invalid. Please enter a valid amount.');
+        setModalMessage('Error: Amount is missing or invalid. Please enter a valid amount.');
         return;
     }
     
     setIsLoading(true);
-    setMessage('');
+    setModalMessage('');
 
     try {
       const response = await axios.post(`${API_URL}/api/create-reimbursement/`, extractedData);
       setMessage(`Success! ${response.data.message}`);
       closeModal();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'An unexpected error occurred. Check backend logs.';
-      setMessage(`Error: ${errorMsg}`);
+      const errorMsg = error.response?.data?.detail || 'An unexpected error occurred.';
+      setModalMessage(`Error: ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +91,7 @@ function App() {
     setIsModalOpen(false);
     setExtractedData(null);
     setImagePreview('');
-    setMessage(''); // Clear any lingering messages from the modal
+    setMessage('');
   };
 
   useEffect(() => {
@@ -96,7 +106,6 @@ function App() {
     <div className="container">
       <img src={logo} alt="Qshala Logo" className="app-logo" />
       <h1>🚀 Qshala AI Reimbursements</h1>
-
       <p>Upload your invoice to begin the reimbursement process.</p>
       
       <button 
@@ -106,13 +115,7 @@ function App() {
         {isLoading ? 'Processing... 🤖' : 'Click to Upload Invoice'}
       </button>
       
-      <input
-        type="file"
-        id="fileInput"
-        className="hidden"
-        onChange={handleFileChange}
-        accept="image/*"
-      />
+      <input type="file" id="fileInput" className="hidden" onChange={handleFileChange} accept="image/*" />
 
       {isModalOpen && (
         <div className="modal-overlay">
@@ -121,6 +124,9 @@ function App() {
             <form className="verification-form" onSubmit={handleSubmit}>
               <h2>Please Verify Details</h2>
               
+              {/* NEW: Display the modal-specific message here */}
+              {modalMessage && <div className={`message ${modalMessage.startsWith('Error') ? 'error' : 'success'}`}>{modalMessage}</div>}
+
               {imagePreview && (
                 <div className="image-preview-container">
                   <img src={imagePreview} alt="Invoice Preview" className="invoice-preview-image"/>
@@ -136,23 +142,17 @@ function App() {
               <div className="form-group">
                 <label htmlFor="amount">Amount (INR)</label>
                 <input
-                  type="number"
-                  id="amount"
-                  name="amount"
-                  value={extractedData.amount || ''}
-                  onChange={handleInputChange}
-                  step="0.01"
-                  placeholder="e.g., 150.50"
+                  type="number" id="amount" name="amount"
+                  value={extractedData.amount || ''} onChange={handleInputChange}
+                  step="0.01" placeholder="e.g., 770.00" required
                 />
               </div>
               <div className="form-group">
                 <label htmlFor="description">Description</label>
                 <textarea
-                  id="description"
-                  name="description"
-                  value={extractedData.description || ''}
-                  onChange={handleInputChange}
-                  rows="3"
+                  id="description" name="description"
+                  value={extractedData.description || ''} onChange={handleInputChange}
+                  rows="3" placeholder="e.g., Invoice from Global Horizons"
                 />
               </div>
               <button type="submit" disabled={isLoading}>
@@ -163,7 +163,6 @@ function App() {
         </div>
       )}
 
-      {/* Messages now appear outside the modal, for main actions */}
       {!isModalOpen && message && <div className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>{message}</div>}
     </div>
   );

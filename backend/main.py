@@ -39,7 +39,9 @@ REIMBURSEMENT_TYPES = [
     'Printing and stationery for quiz', 'Train Ticket'
 ]
 
-# --- API Endpoint 1: Process Invoice Image (UPDATED & FIXED) ---
+# backend/main.py
+
+# --- API Endpoint 1: Process Invoice Image (UPGRADED with better prompt) ---
 @app.post("/api/process-invoice/")
 async def process_invoice(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
@@ -50,20 +52,24 @@ async def process_invoice(file: UploadFile = File(...)):
         file.file.seek(0)
         img = Image.open(file.file)
         model = genai.GenerativeModel('models/gemini-flash-latest')
-        prompt = f"Analyze the invoice image and extract key details like type, amount, and description. Reimbursement Types: {', '.join(REIMBURSEMENT_TYPES)}. Return ONLY a clean JSON object."
+        
+        # --- THIS IS THE NEW, SMARTER PROMPT ---
+        prompt = f"""
+        You are an expert invoice data extractor. Analyze the invoice image and perform the following tasks:
+        1.  **Extract the final total amount.** Look for keywords like 'Total', 'Grand Total', or 'Amount Due'. This is the most important value. The amount should be a number (float or integer) without any currency symbols or commas.
+        2.  **Determine the category.** Based on the vendor name and line items (e.g., 'Travel Solutions', 'Car Rental'), choose the most appropriate category from this list: {', '.join(REIMBURSEMENT_TYPES)}.
+        3.  **Create a concise description.** Summarize the expense, including the vendor name if possible (e.g., "Invoice from Global Horizons Travel Solutions").
+        
+        Return ONLY a single, clean JSON object with the keys "type", "amount", and "description".
+        If you cannot find a clear total amount, return a null or 0 for the amount.
+        """
         
         response = model.generate_content([prompt, img])
 
-        # --- THIS IS THE FIX ---
-        # Instead of using the simple 'response.text', we now safely check the response parts.
-        # This prevents crashes if the AI's response is blocked by safety filters.
         if not response.parts:
-            raise HTTPException(status_code=500, detail="AI response was blocked or empty. Try a different invoice image.")
+            raise HTTPException(status_code=500, detail="AI response was blocked. Try a different invoice.")
         
-        # Safely get the text from the first part of the response
         json_text = response.parts[0].text
-        
-        # Continue with parsing as before
         json_text = json_text.strip().replace("```json", "").replace("```", "")
         extracted_data = json.loads(json_text)
         extracted_data['invoice_url'] = invoice_url
