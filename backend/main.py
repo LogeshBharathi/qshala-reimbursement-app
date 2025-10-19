@@ -39,7 +39,7 @@ REIMBURSEMENT_TYPES = [
     'Printing and stationery for quiz', 'Train Ticket'
 ]
 
-# --- API Endpoint 1: Process Invoice Image ---
+# --- API Endpoint 1: Process Invoice Image (UPDATED & FIXED) ---
 @app.post("/api/process-invoice/")
 async def process_invoice(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
@@ -51,28 +51,38 @@ async def process_invoice(file: UploadFile = File(...)):
         img = Image.open(file.file)
         model = genai.GenerativeModel('models/gemini-flash-latest')
         prompt = f"Analyze the invoice image and extract key details like type, amount, and description. Reimbursement Types: {', '.join(REIMBURSEMENT_TYPES)}. Return ONLY a clean JSON object."
+        
         response = model.generate_content([prompt, img])
-        json_text = response.text.strip().replace("```json", "").replace("```", "")
+
+        # --- THIS IS THE FIX ---
+        # Instead of using the simple 'response.text', we now safely check the response parts.
+        # This prevents crashes if the AI's response is blocked by safety filters.
+        if not response.parts:
+            raise HTTPException(status_code=500, detail="AI response was blocked or empty. Try a different invoice image.")
+        
+        # Safely get the text from the first part of the response
+        json_text = response.parts[0].text
+        
+        # Continue with parsing as before
+        json_text = json_text.strip().replace("```json", "").replace("```", "")
         extracted_data = json.loads(json_text)
         extracted_data['invoice_url'] = invoice_url
         return extracted_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process invoice: {str(e)}")
 
-# --- API Endpoint 2: Create Reimbursement Payout (UPDATED) ---
+# --- API Endpoint 2: Create Reimbursement Payout ---
 @app.post("/api/create-reimbursement/")
 async def create_reimbursement(data: dict):
     amount = data.get("amount")
-    invoice_url = data.get("invoice_url")
-    description = data.get("description")
-    reimbursement_type = data.get("type")
-
-    # --- ADDED SAFETY CHECK ---
-    # This prevents the server from crashing if the amount is missing or invalid.
     if not amount or float(amount) <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount provided. Amount cannot be zero or empty.")
 
+    invoice_url = data.get("invoice_url")
+    description = data.get("description")
+    reimbursement_type = data.get("type")
     amount_in_paise = int(float(amount) * 100)
+    
     try:
         contact_data = {"name": "Qshala Test Employee", "type": "employee"}
         contact_res = requests.post('https://api.razorpay.com/v1/contacts', json=contact_data, auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)).json()
