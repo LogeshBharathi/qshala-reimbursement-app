@@ -9,9 +9,9 @@ A full-stack web application that automates the expense reimbursement process. T
 
 ---
 
-### 🎥 Project GIF
+### 🎥 GIF
 
-![Project Demo GIF](https://qshala-reimbursement-app.vercel.app/static/media/Qshala_logo.b825c0f2fd3ca3b7ca1e.gif)
+![Project Demo GIF](https://qshala-reimbursement-app.vercel.app/static/media/Qshala_logo.b825c0f2fd3ca3b7ca1e.gif) 
 
 ---
 
@@ -62,3 +62,46 @@ pip install -r requirements.txt
 
 # Run the server
 uvicorn main:app --reload
+````
+
+#### **2. Frontend Setup**
+
+```bash
+# Navigate to the frontend folder
+cd frontend
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm start
+```
+
+-----
+
+### \#\# 🔑 Environment Variables
+
+You will need to create a `.env` file in the `backend` directory with the following keys:
+
+```
+GOOGLE_API_KEY="..."
+RAZORPAY_KEY_ID="..."
+RAZORPAY_KEY_SECRET="..."
+RAZORPAY_ACCOUNT_NUMBER="..."
+CLOUDINARY_CLOUD_NAME="..."
+CLOUDINARY_API_KEY="..."
+CLOUDINARY_API_SECRET="..."
+```
+
+-----
+
+### \#\# 🔮 Future Improvements
+
+  * **Manager Approval Dashboard:** A separate interface for managers to approve or reject queued payouts.
+  * **Batch Uploads:** Allow users to upload multiple invoices at once.
+  * **Analytics:** A dashboard to track spending by category and employee.
+
+<!-- end list -->
+
+```
+```
