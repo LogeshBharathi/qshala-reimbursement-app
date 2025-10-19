@@ -52,7 +52,7 @@ function App() {
         timeout: 90000 
       };
 
-      setLoadingMessage('AI is reading the invoice...'); // NEW: Update loading message
+      setLoadingMessage('AI is reading the invoice...'); 
       const response = await axios.post(`${API_URL}/api/process-invoice/`, formData, axiosConfig);
       
       if (!response.data.amount || response.data.amount === 0) {
