@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import logo from './Qshala_logo.gif'; // ✅ IMPORT THE LOGO
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
 const REIMBURSEMENT_TYPES = [
-  'Travel', 'Hotel & Accommodation', 'Food', 'Medical', 'Telephone', 'Fuel', 
+  'Travel', 'Hotel & Accommodation', 'Food', 'Medical', 'Telephone', 'Fuel',
   'Imprest', 'Other', 'Air Ticket', 'Postage/courier/transport/delivery charges',
   'Printing and stationery for quiz', 'Train Ticket'
 ];
@@ -56,16 +57,14 @@ function App() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsLoading(true);
-    setMessage('');
 
-    // --- ADDED SAFETY CHECK ---
-    // This prevents the user from submitting a form with an empty or invalid amount.
     if (!extractedData.amount || parseFloat(extractedData.amount) <= 0) {
         setMessage('Error: Amount is missing or invalid. Please enter a valid amount.');
-        setIsLoading(false);
-        return; // Stop the function here
+        return;
     }
+    
+    setIsLoading(true);
+    setMessage('');
 
     try {
       const response = await axios.post(`${API_URL}/api/create-reimbursement/`, extractedData);
@@ -91,9 +90,11 @@ function App() {
 
   return (
     <div className="container">
+      {/* ✅ ADD THE IMAGE TAG */}
+      <img src={logo} alt="Qshala Logo" className="app-logo" />
       <h1>📄 AI Reimbursement Uploader</h1>
 
-      {!extractedData && (
+      {!extractedData && !isLoading && (
         <div className="upload-box" onClick={() => document.getElementById('fileInput').click()}>
           <input
             type="file"
