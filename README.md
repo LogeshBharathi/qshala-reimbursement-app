@@ -9,11 +9,9 @@ A full-stack web application that automates the expense reimbursement process. T
 
 ---
 
-### 🎥 Project Demo GIF
+### 🎥 Project GIF
 
-*(Recommendation: Record a short GIF of your app flow using a tool like ScreenToGif and place it here.)*
-
-![Project Demo GIF](placeholder.gif) 
+![Project Demo GIF](https://qshala-reimbursement-app.vercel.app/static/media/Qshala_logo.b825c0f2fd3ca3b7ca1e.gif)
 
 ---
 
