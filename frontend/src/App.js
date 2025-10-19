@@ -18,9 +18,9 @@ function App() {
   const [message, setMessage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // NEW: State to hold a message specifically for the modal
   const [modalMessage, setModalMessage] = useState('');
+  // NEW: State for submission status: 'form', 'loading', 'success'
+  const [submissionStatus, setSubmissionStatus] = useState('form'); 
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
@@ -28,8 +28,8 @@ function App() {
 
     setIsLoading(true);
     setMessage('');
-    setExtractedData(null);
-    setModalMessage(''); // Reset modal message
+    setSubmissionStatus('form');
+    setModalMessage('');
     
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
@@ -38,19 +38,14 @@ function App() {
     formData.append('file', file);
 
     try {
-      const response = await axios.post(`${API_URL}/api/process-invoice/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      
-      // ✅ THIS IS THE FIX: Check if the AI failed to extract data
+      const response = await axios.post(`${API_URL}/api/process-invoice/`, formData);
       if (!response.data.amount || response.data.amount === 0) {
         setModalMessage("AI couldn't read the details. Please fill them in manually.");
       }
-      
       setExtractedData(response.data);
       setIsModalOpen(true);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'An unexpected error occurred. Check backend logs.';
+      const errorMsg = error.response?.data?.detail || 'An unexpected error occurred.';
       setMessage(`Error: ${errorMsg}`);
     } finally {
       setIsLoading(false);
@@ -59,31 +54,33 @@ function App() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setExtractedData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setExtractedData((prevData) => ({ ...prevData, [name]: value }));
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!extractedData.amount || parseFloat(extractedData.amount) <= 0) {
-        setModalMessage('Error: Amount is missing or invalid. Please enter a valid amount.');
-        return;
+      setModalMessage('Error: Amount is missing or invalid.');
+      return;
     }
     
-    setIsLoading(true);
+    setSubmissionStatus('loading'); // NEW: Set to loading state
     setModalMessage('');
 
     try {
-      const response = await axios.post(`${API_URL}/api/create-reimbursement/`, extractedData);
-      setMessage(`Success! ${response.data.message}`);
-      closeModal();
+      await axios.post(`${API_URL}/api/create-reimbursement/`, extractedData);
+      setSubmissionStatus('success'); // NEW: Set to success state
+
+      // NEW: Automatically close the modal after 2 seconds
+      setTimeout(() => {
+        closeModal();
+        setMessage('Successfully submitted reimbursement!');
+      }, 2000);
+
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'An unexpected error occurred.';
       setModalMessage(`Error: ${errorMsg}`);
-    } finally {
-      setIsLoading(false);
+      setSubmissionStatus('form'); // Go back to the form on error
     }
   };
 
@@ -91,14 +88,11 @@ function App() {
     setIsModalOpen(false);
     setExtractedData(null);
     setImagePreview('');
-    setMessage('');
   };
 
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
     };
   }, [imagePreview]);
 
@@ -108,11 +102,8 @@ function App() {
       <h1>🚀 Qshala AI Reimbursements</h1>
       <p>Upload your invoice to begin the reimbursement process.</p>
       
-      <button 
-        onClick={() => document.getElementById('fileInput').click()} 
-        disabled={isLoading}
-      >
-        {isLoading ? 'Processing... 🤖' : 'Click to Upload Invoice'}
+      <button onClick={() => document.getElementById('fileInput').click()} disabled={isLoading}>
+        {isLoading ? 'Processing...' : 'Click to Upload Invoice'}
       </button>
       
       <input type="file" id="fileInput" className="hidden" onChange={handleFileChange} accept="image/*" />
@@ -121,44 +112,59 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-content">
             <span className="close-button" onClick={closeModal}>&times;</span>
-            <form className="verification-form" onSubmit={handleSubmit}>
-              <h2>Please Verify Details</h2>
-              
-              {/* NEW: Display the modal-specific message here */}
-              {modalMessage && <div className={`message ${modalMessage.startsWith('Error') ? 'error' : 'success'}`}>{modalMessage}</div>}
+            
+            {/* NEW: Conditional Rendering for Loading/Success */}
+            {submissionStatus === 'loading' && (
+              <div className="submission-view">
+                <div className="spinner"></div>
+                <h2>Submitting...</h2>
+              </div>
+            )}
 
-              {imagePreview && (
-                <div className="image-preview-container">
+            {submissionStatus === 'success' && (
+              <div className="submission-view">
+                <h2>✅ Success!</h2>
+                <p>Your reimbursement has been submitted.</p>
+              </div>
+            )}
+
+            {submissionStatus === 'form' && (
+              <div className="modal-body">
+                <div className="modal-left">
                   <img src={imagePreview} alt="Invoice Preview" className="invoice-preview-image"/>
                 </div>
-              )}
-
-              <div className="form-group">
-                <label htmlFor="type">Type of Reimbursement</label>
-                <select id="type" name="type" value={extractedData.type || 'Other'} onChange={handleInputChange}>
-                  {REIMBURSEMENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                </select>
+                <div className="modal-right">
+                  <form className="verification-form" onSubmit={handleSubmit}>
+                    <h2>Please Verify Details</h2>
+                    {modalMessage && <div className={`message error`}>{modalMessage}</div>}
+                    
+                    <div className="form-group">
+                      <label htmlFor="type">Type of Reimbursement</label>
+                      <select id="type" name="type" value={extractedData.type || 'Other'} onChange={handleInputChange}>
+                        {REIMBURSEMENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="amount">Amount (INR)</label>
+                      <input
+                        type="number" id="amount" name="amount"
+                        value={extractedData.amount || ''} onChange={handleInputChange}
+                        step="0.01" placeholder="e.g., 770.00" required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="description">Description</label>
+                      <textarea
+                        id="description" name="description"
+                        value={extractedData.description || ''} onChange={handleInputChange}
+                        rows="3" placeholder="e.g., Invoice from Global Horizons"
+                      />
+                    </div>
+                    <button type="submit">Confirm & Submit</button>
+                  </form>
+                </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="amount">Amount (INR)</label>
-                <input
-                  type="number" id="amount" name="amount"
-                  value={extractedData.amount || ''} onChange={handleInputChange}
-                  step="0.01" placeholder="e.g., 770.00" required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="description">Description</label>
-                <textarea
-                  id="description" name="description"
-                  value={extractedData.description || ''} onChange={handleInputChange}
-                  rows="3" placeholder="e.g., Invoice from Global Horizons"
-                />
-              </div>
-              <button type="submit" disabled={isLoading}>
-                {isLoading ? 'Submitting...' : 'Confirm & Submit Reimbursement'}
-              </button>
-            </form>
+            )}
           </div>
         </div>
       )}

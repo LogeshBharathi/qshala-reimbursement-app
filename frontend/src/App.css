@@ -1,14 +1,14 @@
 /* frontend/src/App.css */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 :root {
-  --qshala-blue: #0A192F; /* Dark Blue from Qshala logo */
-  --qshala-yellow: #FDD10C; /* Bright Yellow from Qshala logo */
+  --qshala-blue: #0A192F;
+  --qshala-yellow: #FDD10C;
   --light-text: #E0E0E0;
   --dark-background: #121212;
   --card-background: #1E1E1E;
   --form-element-bg: #333333;
-  --border-color: #4a6fa5; /* Slightly lighter blue for borders */
+  --border-color: #4a6fa5;
   --success-color: #28a745;
   --error-color: #dc3545;
 }
@@ -16,42 +16,30 @@
 body {
   margin: 0;
   font-family: 'Poppins', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: var(--qshala-blue); /* Qshala dark blue background */
+  background: var(--qshala-blue);
   color: var(--light-text);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh; /* Ensure it takes full viewport height */
+  min-height: 100vh;
   padding: 20px;
   box-sizing: border-box;
 }
 
 .container {
   text-align: center;
-  background-color: var(--qshala-blue); /* Container also Qshala blue */
-  padding: 0px; /* Adjust padding as modal will handle its own */
-  border-radius: 12px;
   max-width: 600px;
   width: 100%;
-  position: relative; /* For logo positioning */
 }
 
-/* Logo positioning and styling */
 .app-logo {
-  position: absolute;
-  top: -60px; /* Adjust as needed to position relative to container, or make fixed */
-  left: 20px;
-  width: 173px;
-  height: auto; /* Use auto for height to maintain aspect ratio */
-  border-radius: 5px;
-  z-index: 1000;
+  width: 170px;
+  margin-bottom: 20px;
 }
 
 h1 {
-  color: var(--qshala-yellow); /* Qshala yellow for main heading */
-  margin-bottom: 20px;
+  color: var(--qshala-yellow);
+  margin-bottom: 10px;
   font-size: 2.2em;
 }
 
@@ -62,8 +50,8 @@ p {
 }
 
 button {
-  background-color: var(--qshala-yellow); /* Yellow button */
-  color: var(--qshala-blue); /* Dark blue text on yellow button */
+  background-color: var(--qshala-yellow);
+  color: var(--qshala-blue);
   border: none;
   padding: 15px 30px;
   border-radius: 8px;
@@ -75,7 +63,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background-color: #ffd700; /* Slightly darker yellow on hover */
+  background-color: #ffd700;
   transform: translateY(-2px);
 }
 
@@ -85,43 +73,26 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.hidden {
-  display: none;
-}
-
-.spinner {
-  margin-top: 20px;
-  font-size: 1.2em;
-  color: var(--qshala-yellow);
-}
+.hidden { display: none; }
 
 .message {
   margin-top: 20px;
   padding: 12px 20px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 1em;
-  opacity: 0.9;
 }
 
-.message.error {
-  background-color: var(--error-color);
-  color: #fff;
-}
+.message.error { background-color: var(--error-color); color: #fff; }
+.message.success { background-color: var(--success-color); color: #fff; }
 
-.message.success {
-  background-color: var(--success-color);
-  color: #fff;
-}
-
-/* --- Modal Specific Styles --- */
+/* --- MODAL STYLES --- */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.8); /* Darker overlay */
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -129,19 +100,14 @@ button:disabled {
 }
 
 .modal-content {
-  background-color: var(--dark-background); /* Dark background for modal */
-  padding: 30px;
+  background-color: var(--card-background);
   border-radius: 12px;
   width: 90%;
-  max-width: 600px; /* Adjust max-width for better fit */
-  box-shadow: 0 8px 25px rgba(0,0,0,0.5); /* Stronger shadow */
+  max-width: 900px; /* Wider for horizontal layout */
+  box-shadow: 0 8px 25px rgba(0,0,0,0.5);
   position: relative;
-  border: 1px solid var(--border-color); /* Light blue border */
-  display: flex; /* Use flex for layout inside modal */
-  flex-direction: column;
-  gap: 20px; /* Spacing between sections */
-  max-height: 90vh; /* Limit modal height */
-  overflow-y: auto; /* Allow scrolling if content is too tall */
+  border: 1px solid var(--border-color);
+  max-height: 90vh;
 }
 
 .close-button {
@@ -153,79 +119,93 @@ button:disabled {
   color: var(--light-text);
   cursor: pointer;
   line-height: 1;
+  z-index: 10;
+}
+
+/* --- NEW: Horizontal Layout --- */
+.modal-body {
+  display: flex;
+  flex-direction: row;
+}
+
+.modal-left {
+  flex: 1;
+  padding: 20px;
+  background-color: var(--dark-background);
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-right {
+  flex: 1;
+  padding: 30px 40px;
+  overflow-y: auto; /* Allow form to scroll if needed */
+}
+
+.invoice-preview-image {
+  max-width: 100%;
+  max-height: 75vh;
+  height: auto;
+  display: block;
+  border-radius: 5px;
 }
 
 .verification-form h2 {
-  color: var(--qshala-yellow); /* Yellow for modal heading */
+  color: var(--qshala-yellow);
   font-size: 1.8em;
+  margin-top: 0;
   margin-bottom: 25px;
   border-bottom: 2px solid var(--border-color);
   padding-bottom: 15px;
 }
 
-.form-group {
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: var(--light-text);
-  font-size: 0.95em;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
+.form-group { margin-bottom: 20px; text-align: left; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  background-color: var(--form-element-bg); /* Darker input fields */
+  background-color: var(--form-element-bg);
   color: var(--light-text);
   font-size: 1em;
-  box-sizing: border-box; /* Include padding in width */
+  box-sizing: border-box;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--qshala-yellow); /* Yellow focus border */
-  box-shadow: 0 0 0 2px rgba(253, 209, 12, 0.3);
-}
-
-.form-group textarea {
-  resize: vertical; /* Allow vertical resizing */
-  min-height: 80px;
-}
-
-.image-preview-container {
-  margin-bottom: 20px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: var(--form-element-bg); /* Slightly darker background for preview */
-  padding: 5px; /* Small padding inside the border */
-}
-
-.invoice-preview-image {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 5px; /* Match container border-radius */
-}
-
-/* Ensure modal buttons use the theme colors */
-.modal-content button {
-  background-color: var(--qshala-yellow);
-  color: var(--qshala-blue);
-  width: 100%; /* Make modal button full width */
+.modal-right button {
+  width: 100%;
   margin-top: 20px;
 }
 
-.modal-content button:hover:not(:disabled) {
-  background-color: #ffd700;
+/* --- NEW: Loading and Success States --- */
+.submission-view {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  padding: 40px;
+}
+
+.submission-view h2 {
+  color: var(--qshala-yellow);
+  font-size: 2em;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid var(--qshala-yellow);
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
